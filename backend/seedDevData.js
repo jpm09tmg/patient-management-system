@@ -11,10 +11,7 @@ const Billing = require('./models/billing');
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/patient_management_dev', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/patient_management_dev');
     console.log('✅ MongoDB Connected');
   } catch (err) {
     console.error('❌ MongoDB Connection Error:', err.message);
@@ -35,24 +32,30 @@ const seedDatabase = async () => {
     await Billing.deleteMany({});
     console.log('✅ Existing data cleared\n');
 
-    // Create users
+    // Create users WITH HASHED PASSWORDS
     console.log('👥 Creating users...');
+    
+    // Hash passwords BEFORE inserting
+    const hashedAdminPass = await bcrypt.hash('admin123', 10);
+    const hashedDoctorPass = await bcrypt.hash('doctor123', 10);
+    const hashedNursePass = await bcrypt.hash('nurse123', 10);
+    
     const users = [
       {
         username: 'admin',
-        password: 'admin123',
+        password: hashedAdminPass,
         role: 'admin',
         email: 'admin@hospital.com'
       },
       {
         username: 'doctor1',
-        password: 'doctor123',
+        password: hashedDoctorPass,
         role: 'doctor',
         email: 'doctor1@hospital.com'
       },
       {
         username: 'nurse1',
-        password: 'nurse123',
+        password: hashedNursePass,
         role: 'nurse',
         email: 'nurse1@hospital.com'
       }
