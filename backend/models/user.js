@@ -1,53 +1,42 @@
-const express = require('express');
-const router = express.Router();
-const Patient = require('../models/patient');
-const auth = require('../middleware/auth');
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
-router.get('/', auth, async (req, res) => {
-  try {
-    const patients = await Patient.find();
-    res.json(patients);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+const userSchema = new mongoose.Schema({
+  username: { 
+    type: String, 
+    required: true, 
+    unique: true 
+  },
+  password: { 
+    type: String, 
+    required: true 
+  },
+  role: { 
+    type: String, 
+    enum: ['admin', 'doctor', 'nurse', 'staff'],
+    default: 'staff'
+  },
+  email: {
+    type: String,
+    required: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-router.post('/', auth, async (req, res) => {
-  const patient = new Patient(req.body);
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
   try {
-    const newPatient = await patient.save();
-    res.status(201).json(newPatient);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    next(err);
   }
 });
 
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const patient = await Patient.findById(req.params.id);
-    if (!patient) return res.status(404).json({ message: 'Patient not found' });
-    res.json(patient);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.put('/:id', auth, async (req, res) => {
-  try {
-    const patient = await Patient.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(patient);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
-
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    await Patient.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Patient deleted' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-module.exports = router;
+module.exports = mongoose.model('User', userSchema);
